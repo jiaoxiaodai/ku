@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.game.gambler.entrepot.mapper.ReportMapper">
+
+    <sql id="getGameCodeList">
+        select GAME_CODE from t_game where instr(game_name, #{game_name,jdbcType=VARCHAR})
+    </sql>
+
+    <sql id="getPackageCodeList">
+        select PACKAGE_CODE from t_game_package where instr(package_name, #{package_name,jdbcType=VARCHAR})
+    </sql>
+
+
+    <select id="queryReceiptDetail" resultType="com.game.gambler.entrepot.vo.ReceiptDetailRes">
+        select p.un_id,
+        game_name,package_name, currency_code,package_fee,
+        order_no,
+        status,
+        create_subacount,
+        owner,
+        p.create_time,
+        use_time,
+        receipt_time_char,
+        invalid_reason,
+        receipt_time
+        from t_game_license p
+        left join t_game_package tgp on p.game_code= tgp.game_code and p.package_code = tgp.package_code
+        left join t_game tg on tg.game_code = p.game_code
+        <where>
+            <if test="del_flag != null">and del_flag = #{del_flag,jdbcType=INTEGER}</if>
+            <if test="game_name != null">and p.game_code in (<include refid="getGameCodeList" />)</if>
+            <if test="package_name != null">and p.package_code in (<include refid="getPackageCodeList" />)</if>
+            <if test="status != null">and status = #{status,jdbcType=VARCHAR}</if>
+            <if test="order_no != null and order_no.length()>0">and order_no= #{order_no,jdbcType=VARCHAR}</if>
+            <if test="import_child != null">and create_subacount = #{import_child,jdbcType=VARCHAR}</if>
+            <if test="export_child != null">and owner = #{export_child,jdbcType=BIGINT}</if>
+            <if test="importStartDate !=null">and p.create_time &gt;= #{importStartDate,jdbcType=TIMESTAMP}</if>
+            <if test="importEndDate !=null">and p.create_time &lt;= #{importEndDate,jdbcType=TIMESTAMP}</if>
+            <if test="exportStartDate !=null">and use_time &gt;= #{exportStartDate,jdbcType=TIMESTAMP}</if>
+            <if test="exportEndDate !=null">and use_time &lt;= #{exportEndDate,jdbcType=TIMESTAMP}</if>
+            <if test="export == 1">and use_time is not null</if>
+        </where>
+        <choose>
+            <when test="del_flag != null and del_flag == 1">
+                order by receipt_time desc
+            </when>
+            <when test="exportStartDate !=null or exportEndDate!=null or export ==1">
+                order by use_time desc
+            </when>
+            <otherwise>
+                order by p.un_id desc
+            </otherwise>
+        </choose>
+    </select>
+
+    <select id="queryDownLoadResByOrder" resultType="com.game.gambler.entrepot.vo.upload.DownLoadRes">
+        select
+        game_name,package_name, currency_code,package_fee,
+        status,
+        order_no,
+        p.create_time,
+        use_time,
+        receipt_temporary,
+        receipt,
+        receipt_time_char,
+        discount
+        from t_game_license p
+        left join t_game_package tgp on p.game_code= tgp.game_code and p.package_code = tgp.package_code
+        left join t_game tg on tg.game_code = p.game_code
+        where
+        <choose>
+            <when test="collection != null and collection.size>0">
+                order_no in
+                <foreach item="item" index="index" collection="collection" open="(" separator="," close=")">
+                    #{item,jdbcType=BIGINT}
+                </foreach>
+            </when>
+            <otherwise>
+                p.un_id = -1
+            </otherwise>
+        </choose>
+        order by p.un_id desc
+    </select>
+
+
+    <select id="queryStockDetails" resultType="com.game.gambler.entrepot.vo.report.StockDetailsRes">
+        select game_name,package_name,package_fee,p.package_code,p.game_code,
+        sum(if(status = '可使用',1,0)) as normal_amount,
+        sum(if(status = '已分配',1,0)) as allocated_amount
+        from t_game_license p
+        left join t_game_package tgp on p.game_code= tgp.game_code and p.package_code = tgp.package_code
+        left join t_game tg on tg.game_code = p.game_code
+        <where>
+            <if test="game_name != null">and p.game_code in (<include refid="getGameCodeList" />)</if>
+            <if test="package_name != null">and p.package_code in (<include refid="getPackageCodeList" />)</if>
+            and del_flag = 0
+        </where>
+        group by p.game_code ,p.package_code  having normal_amount >0 or allocated_amount >0 order by p.game_code
+    </select>
+
+    <select id="queryStockChildDetails" resultType="com.game.gambler.entrepot.vo.report.StockDetailsRes">
+        select game_name,package_name,package_fee,p.package_code,p.game_code,
+        sum(if(status = '已分配',1,0)) as allocated_amount,
+        sum(if(status != '已分配',1,0)) as used_amount,
+        owner
+        from t_game_license p
+        left join t_game_package tgp on p.game_code= tgp.game_code and p.package_code = tgp.package_code
+        left join t_game tg on tg.game_code = p.game_code
+        <where>
+            owner is not null
+            <if test="game_name != null">and p.game_code in (<include refid="getGameCodeList" />)</if>
+            <if test="package_name != null">and p.package_code in (<include refid="getPackageCodeList" />)</if>
+            <if test="export_child != null">and owner = #{export_child,jdbcType=VARCHAR}</if>
+            and del_flag = 0
+        </where>
+        group by p.game_code ,p.package_code,owner order by owner,p.game_code
+    </select>
+
+    <select id="queryImportReport" resultType="com.game.gambler.entrepot.vo.report.StockCountRes">
+        select game_name,package_name,package_fee,p.package_code,create_subacount as account,
+        count(*) as importNum
+        from t_game_license p
+        left join t_game_package tgp on p.game_code= tgp.game_code and p.package_code = tgp.package_code
+        left join t_game tg on tg.game_code = p.game_code
+        <where>
+            <if test="game_name != null">and p.game_code in (<include refid="getGameCodeList" />)</if>
+            <if test="package_name != null">and p.package_code in (<include refid="getPackageCodeList" />)</if>
+            <if test="import_child != null">and create_subacount = #{import_child,jdbcType=VARCHAR}</if>
+            <if test="importStartDate !=null">and p.create_time &gt;= #{importStartDate,jdbcType=TIMESTAMP}</if>
+            <if test="importEndDate !=null">and p.create_time &lt;= #{importEndDate,jdbcType=TIMESTAMP}</if>
+        </where>
+        group by p.game_code ,p.package_code,create_subacount order by create_subacount,p.game_code
+    </select>
+
+    <select id="queryExportReport" resultType="com.game.gambler.entrepot.vo.report.StockCountRes">
+        select game_name,package_name,package_fee,p.package_code,owner as account,
+        count(*) as exportNum
+        from t_game_license p
+        left join t_game_package tgp on p.game_code= tgp.game_code and p.package_code = tgp.package_code
+        left join t_game tg on tg.game_code = p.game_code
+        <where>
+            use_time is not null
+            <if test="game_name != null">and p.game_code in (<include refid="getGameCodeList" />)</if>
+            <if test="package_name != null">and p.package_code in (<include refid="getPackageCodeList" />)</if>
+            <if test="export_child != null">and owner = #{export_child,jdbcType=BIGINT}</if>
+            <if test="exportStartDate !=null">and use_time &gt;= #{exportStartDate,jdbcType=TIMESTAMP}</if>
+            <if test="exportEndDate !=null">and use_time &lt;= #{exportEndDate,jdbcType=TIMESTAMP}</if>
+            <if test="importStartDate !=null">and p.create_time &gt;= #{importStartDate,jdbcType=TIMESTAMP}</if>
+            <if test="importEndDate !=null">and p.create_time &lt;= #{importEndDate,jdbcType=TIMESTAMP}</if>
+        </where>
+        group by p.game_code ,p.package_code,owner order by owner,p.game_code
+    </select>
+
+    <select id="queryGamePriceSurvey" resultType="com.game.gambler.entrepot.vo.report.GamePriceSurveyRes">
+        select game_name,package_name,package_fee,p.package_code,
+        sum(if(status in ('可使用','已分配') ,1,0)) as normal_num,
+        sum(if(status in ('可使用','已分配') ,package_fee,0)) as normal_amount,
+        sum(package_fee) as all_amount
+        from t_game_license p
+        left join t_game_package tgp on p.game_code= tgp.game_code and p.package_code = tgp.package_code
+        left join t_game tg on tg.game_code = p.game_code
+        <where>
+            DEL_FLAG=0
+            <if test="game_name != null">and p.game_code in (<include refid="getGameCodeList" />)</if>
+            <if test="package_name != null">and p.package_code in (<include refid="getPackageCodeList" />)</if>
+
+        </where>
+        group by p.game_code ,p.package_code order by all_amount desc
+    </select>
+
+    <select id="querySurvey" resultType="com.game.gambler.entrepot.vo.report.StockSurveyRes">
+        select
+        sum(package_fee)  as totalPrice,
+        sum(if(status not in ('可使用','已分配') ,package_fee,0))  as usedTotalPrice,
+        sum(if(status in ('可使用','已分配') ,1,0)) as totalCanUsed,
+        sum(if(status in ('可使用','已分配') ,package_fee,0)) as totalCanUsedPrice,
+
+        sum(if(p.create_time between yesterday and today, 1, 0)) as yesterdayImport,
+        sum(if(p.create_time between yesterday and today, package_fee, 0)) as yesterdayImportPrice,
+        sum(if(p.use_time between yesterday and today, 1, 0)) as yesterdayExport,
+        sum(if(p.use_time between yesterday and today, package_fee, 0)) as yesterdayExportPrice,
+        sum(if(p.create_time >= today, 1, 0)) as todayImport,
+        sum(if(p.create_time >= today, package_fee, 0)) as todayImportPrice,
+        sum(if(p.use_time >= today, 1, 0)) as todayExport,
+        sum(if(p.use_time >= today, package_fee, 0)) as todayExportPrice
+
+        from t_game_license p
+        left join t_game_package tgp on p.game_code = tgp.game_code and p.package_code = tgp.package_code,
+        (select date_sub(curdate(), interval 1 day) as yesterday, curdate() as today) y
+    </select>
+</mapper>

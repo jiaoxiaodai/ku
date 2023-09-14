@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.game.gambler.system.mapper.SystemMapper">
+
+
+    <select id="getLicense" resultType="string">
+        select VALUE_A
+        from t_dictionary
+        where UN_ID = 1
+    </select>
+
+
+    <select id="autoVerify" resultType="_boolean">
+        select if(CODE = 'true', 1, 0)
+        from t_dictionary
+        where UN_ID = 2
+    </select>
+
+    <select id="autoToSubCode" resultType="string">
+        select CODE
+        from t_dictionary
+        where UN_ID = 3
+    </select>
+
+    <select id="autoToSubAccount" resultType="string">
+        select VALUE_A
+        from t_dictionary
+        where UN_ID = 3
+    </select>
+
+    <update id="upDataDictionary">
+        update t_dictionary
+        set CODE = #{valueA,jdbcType=VARCHAR},
+            VALUE_A = #{code,jdbcType=VARCHAR}
+        where UN_ID = #{un_id,jdbcType=BIGINT}
+    </update>
+
+    <select id="plugProductOrder" resultType="java.lang.String">
+        select VALUE_B
+        from t_dictionary
+        where UN_ID = 3
+    </select>
+
+    <update id="upDataplugProductOrder">
+        update t_dictionary
+        set  VALUE_B = #{valueB,jdbcType=VARCHAR}
+        where UN_ID = #{un_id,jdbcType=BIGINT}
+    </update>
+</mapper>

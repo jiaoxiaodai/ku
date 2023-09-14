@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.game.gambler.plugin.mapper.ReceiptLogMapper">
+
+
+    <insert id="insert">
+        insert into log_receipt (transaction_id, usage_state, handler_chiId)
+        values (#{transaction_id,jdbcType=VARCHAR}, #{usage_state,jdbcType=INTEGER}, #{handler_chiId,jdbcType=VARCHAR})
+    </insert>
+
+    <insert id="insertList">
+        insert into log_receipt (transaction_id, usage_state, handler_chiId)
+        values
+        <foreach collection="transaction_ids" item="item" index="index" separator=",">
+            (#{item,jdbcType=VARCHAR},
+            #{usage_state,jdbcType=INTEGER},
+            #{handler_chiId,jdbcType=VARCHAR})
+        </foreach>
+    </insert>
+
+    <select id="selectReceiptLog" resultType="com.game.gambler.plugin.vo.ReceiptLogRes">
+        select game_name,package_name,handler_chiId, usage_state, transaction_id, lr.create_time
+        from log_receipt lr
+        left join(select GAME_CODE,PACKAGE_CODE,ORDER_NO from t_game_license) t on lr.transaction_id = t.ORDER_NO
+        left join t_game_package tgp on t.game_code= tgp.game_code and t.package_code = tgp.package_code
+        left join t_game tg on tg.game_code = t.game_code
+        <where>
+            <if test="handler_chiId != null">and handler_chiId = #{handler_chiId,jdbcType=VARCHAR}</if>
+            <if test="transaction_id != null and transaction_id.length()>0">and transaction_id =
+                #{transaction_id,jdbcType=VARCHAR}
+            </if>
+            <if test="startTime !=null">and lr.create_time &gt;= #{startTime,jdbcType=TIMESTAMP}</if>
+            <if test="endTime !=null">and lr.create_time &lt;= #{endTime,jdbcType=TIMESTAMP}</if>
+            <if test="type !=null and type.length()>0">and lr.usage_state= #{type,jdbcType=VARCHAR}</if>
+        </where>
+        order by id desc
+    </select>
+
+    <delete id="clearLogs">
+        delete
+        from log_receipt
+    </delete>
+
+
+</mapper>

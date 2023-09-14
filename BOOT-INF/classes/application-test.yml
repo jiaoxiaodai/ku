@@ -1,0 +1,7 @@
+spring:
+  datasource:
+   druid:
+      url: jdbc:mysql:///prilic?serverTimezone=GMT%2B8
+      username: 
+      password: 
+      connectionProperties: druid.stat.slowSqlMillis=5000;druid.stat.logSlowSql=true;

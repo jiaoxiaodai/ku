@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.game.gambler.entrepot.mapper.ReceiptMapper">
+
+    <select id="selectOrderNos" resultType="string">
+        select order_no
+        from t_game_license
+        where GAME_CODE = #{game_code,jdbcType=VARCHAR}
+          and PACKAGE_CODE = #{package_code,jdbcType=VARCHAR}
+          and status = '可使用'
+          and owner is null
+          and del_flag = 0
+        order by create_time
+        limit #{apportionNum,jdbcType=INTEGER}
+    </select>
+
+
+    <select id="selectApportiondOrderNos" resultType="string">
+        select order_no
+        from t_game_license
+        where GAME_CODE = #{game_code,jdbcType=VARCHAR}
+          and PACKAGE_CODE = #{package_code,jdbcType=VARCHAR}
+          and status = '已分配'
+          and owner = #{owner,jdbcType=BIGINT}
+          and del_flag = 0
+        order by create_time
+        limit #{apportionNum,jdbcType=INTEGER}
+    </select>
+
+
+    <update id="upDataOwner">
+        update t_game_license
+        set OWNER = #{owners,jdbcType=BIGINT},STATUS = case
+            when USE_TIME is not null then STATUS
+            when #{owners,jdbcType=BIGINT} is null then '可使用'
+            else '已分配' end
+        where ORDER_NO in
+        <foreach item="item" index="index" collection="order_nos" open="(" separator="," close=")">
+            #{item,jdbcType=BIGINT}
+        </foreach>
+    </update>
+
+    <update id="recycle">
+        update t_game_license
+        set DEL_FLAG = #{isRecycle,jdbcType=INTEGER},RECEIPT_TIME = now()
+        where ORDER_NO in
+        <foreach item="item" index="index" collection="order_nos" open="(" separator="," close=")">
+            #{item,jdbcType=BIGINT}
+        </foreach>
+    </update>
+
+    <update id="upDataStatus">
+        update t_game_license
+        set STATUS = #{status,jdbcType=VARCHAR}
+        where ORDER_NO in
+        <foreach item="item" index="index" collection="order_nos" open="(" separator="," close=")">
+            #{item,jdbcType=BIGINT}
+        </foreach>
+    </update>
+
+    <delete id="delete">
+        delete from t_game_license
+        where DEL_FLAG = 1
+        <if test="collection != null and collection.size() > 0">
+            and ORDER_NO in
+            <foreach item="item" index="index" collection="collection" open="(" separator="," close=")">
+                #{item,jdbcType=BIGINT}
+            </foreach>
+        </if>
+    </delete>
+
+    <delete id="remark">
+        update t_game_license
+        set INVALID_REASON = #{remark,jdbcType=VARCHAR}
+        where ORDER_NO in
+        <foreach item="item" index="index" collection="order_nos" open="(" separator="," close=")">
+            #{item,jdbcType=BIGINT}
+        </foreach>
+    </delete>
+
+
+</mapper>

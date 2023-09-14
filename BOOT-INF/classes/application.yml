@@ -1,0 +1,44 @@
+server:
+  port: 8086
+
+spring:
+  profiles:
+#    active: test
+    active: dev
+
+  datasource:
+    druid:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      initialSize: 5
+      minIdle: 5
+      maxActive: 20
+      maxWait: 9000
+      timeBetweenEvictionRunsMillis: 60000
+      minEvictableIdleTimeMillis: 300000
+      validationQuery: SELECT 1 FROM DUAL
+      testWhileIdle: true
+      testOnBorrow: true
+      testOnReturn: false
+      poolPreparedStatements: false
+      # 配置监控统计拦截的filters，去掉后监控界面sql无法统计，'wall'用于防火墙
+      filters: config,stat,wall
+      # 合并多个DruidDataSource的监控数据
+      useGlobalDataSourceStat: true
+      # 通过connectProperties属性来打开mergeSql功能；慢SQL记录
+      # connectionProperties: druid.stat.mergeSql:true;druid.stat.slowSqlMillis:5000
+      remove-abandoned: true
+      remove-abandoned-timeout: 1800
+
+mybatis:
+  type-aliases-package: com.game.gambler.entity
+  mapper-locations: classpath*:mapping/*.xml
+
+#分页
+#pageNum:pageNum;pageSize:pageSize;count:countSql;reasonable:reasonable;pageSizeZero:pageSizeZero
+pagehelper:
+  helper-dialect: mysql
+  reasonable: true
+  support-methods-arguments: true
+
+system: 0
+pv: 0

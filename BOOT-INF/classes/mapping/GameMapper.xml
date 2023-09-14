@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.game.gambler.entrepot.mapper.GameMapper">
+    <update id="upGameInfo" parameterType="com.game.gambler.plugin.entity.Game">
+        insert into t_game (GAME_NAME, GAME_CODE)
+        values (#{GAME_NAME, jdbcType = VARCHAR}, #{GAME_CODE, jdbcType = VARCHAR})
+        ON DUPLICATE KEY UPDATE GAME_NAME   = #{GAME_NAME, jdbcType = VARCHAR},
+                                CREATE_TIME = now()
+    </update>
+
+
+    <update id="upProductInfo">
+        insert into t_game_package (GAME_CODE, PACKAGE_CODE,
+                                    PACKAGE_NAME, COUNTRY_CODE, PACKAGE_FEE)
+        values (#{GAME_CODE, jdbcType = VARCHAR}, #{PACKAGE_CODE, jdbcType = VARCHAR},
+                #{PACKAGE_NAME, jdbcType = VARCHAR}, #{COUNTRY_CODE, jdbcType = VARCHAR},
+                #{PACKAGE_FEE, jdbcType = DECIMAL})
+        ON DUPLICATE KEY UPDATE PACKAGE_NAME = #{PACKAGE_NAME, jdbcType = VARCHAR},
+                                COUNTRY_CODE = #{COUNTRY_CODE, jdbcType = VARCHAR},
+                                PACKAGE_FEE  = #{PACKAGE_FEE, jdbcType = VARCHAR},
+                                CREATE_TIME  = now()
+    </update>
+
+    <delete id="deleteGame">
+        delete
+        from t_game
+        where UN_ID = #{UN_ID, jdbcType = BIGINT}
+    </delete>
+
+    <delete id="deleteProduct">
+        delete
+        from t_game_package
+                where UN_ID in
+        <foreach item="item" index="index" collection="UN_IDS" open="(" separator="," close=")">
+            #{item, jdbcType = BIGINT}
+        </foreach>
+    </delete>
+
+    <delete id="deleteProductByGameCode">
+        delete
+        from t_game_package
+        where GAME_CODE = #{GAME_CODE, jdbcType = BIGINT}
+    </delete>
+
+    <select id="selectGame" resultType="com.game.gambler.plugin.entity.Game">
+        select *
+        from t_game
+        <where>
+            <if test="GAME_CODE != null">
+                instr(GAME_CODE, #{GAME_CODE, jdbcType = VARCHAR})
+            </if>
+            <if test="GAME_NAME != null">
+                and instr(GAME_NAME, #{GAME_NAME,jdbcType=VARCHAR})
+            </if>
+        </where>
+        order by GAME_CODE
+    </select>
+
+    <select id="selectGamesById" resultType="com.game.gambler.plugin.entity.Game">
+        select *
+        from t_game where UN_ID in
+        <foreach item="item" index="index" collection="UN_IDS" open="(" separator="," close=")">
+            #{item,jdbcType=BIGINT}
+        </foreach>
+    </select>
+
+
+    <select id="selectProduct" resultType="com.game.gambler.plugin.entity.Product">
+        select *
+        from t_game_package left join t_game on t_game.GAME_CODE = t_game_package.GAME_CODE
+        <where>
+            <if test="GAME_CODE != null">
+                instr(t_game_package.GAME_CODE, #{GAME_CODE, jdbcType = VARCHAR})
+            </if>
+            <if test="GAME_NAME != null">
+                and instr(GAME_NAME, #{GAME_NAME,jdbcType=VARCHAR})
+            </if>
+            <if test="PACKAGE_CODE != null">
+                and instr(PACKAGE_CODE, #{PACKAGE_CODE,jdbcType=VARCHAR})
+            </if>
+            <if test="PACKAGE_NAME != null">
+                and instr(PACKAGE_NAME, #{PACKAGE_NAME,jdbcType=VARCHAR})
+            </if>
+        </where>
+        order by t_game_package.GAME_CODE, PACKAGE_FEE
+    </select>
+
+    <select id="selectProductById" resultType="com.game.gambler.plugin.entity.Product">
+        select *
+        from t_game_package
+                     left join t_game on t_game.GAME_CODE = t_game_package.GAME_CODE
+        where t_game_package.UN_ID = #{UN_ID, jdbcType = BIGINT}
+    </select>
+
+    <select id="selectProductByCode" resultType="com.game.gambler.plugin.entity.Product">
+        select *
+        from t_game_package
+                     left join t_game on t_game.GAME_CODE = t_game_package.GAME_CODE
+        where t_game_package.GAME_CODE = #{GAME_CODE, jdbcType = VARCHAR}
+          and t_game_package.PACKAGE_CODE = #{PACKAGE_CODE, jdbcType = VARCHAR}
+    </select>
+
+    <update id="upProductStatus">
+        update t_game_package
+        set PACKAGE_STATUS = #{status, jdbcType = INTEGER}
+                where UN_ID in
+        <foreach item="item" index="index" collection="UN_IDS" open="(" separator="," close=")">
+            #{item, jdbcType = BIGINT}
+        </foreach>
+    </update>
+
+    <insert id="insertGames">
+        insert into t_game (GAME_NAME, GAME_CODE)
+                values
+        <foreach collection="list" item="item" index="index" separator=",">
+            (#{item.GAME_NAME, jdbcType = VARCHAR},
+             #{item.GAME_CODE, jdbcType = VARCHAR})
+        </foreach>
+        ON DUPLICATE KEY UPDATE CREATE_TIME = now()
+    </insert>
+
+    <select id="selectProductsById" resultType="com.game.gambler.plugin.entity.Product">
+        select *
+        from t_game_package where UN_ID in
+        <foreach item="item" index="index" collection="UN_IDS" open="(" separator="," close=")">
+            #{item,jdbcType=BIGINT}
+        </foreach>
+    </select>
+
+    <insert id="insertProducts">
+        insert into t_game_package(GAME_CODE, PACKAGE_CODE, PACKAGE_NAME, PACKAGE_FEE)
+        values
+        <foreach collection="list" item="item" index="index" separator=",">
+            (#{item.GAME_CODE, jdbcType = VARCHAR},
+            #{item.PACKAGE_CODE, jdbcType = VARCHAR},
+            #{item.PACKAGE_NAME, jdbcType = VARCHAR},
+            #{item.PACKAGE_FEE, jdbcType = DECIMAL})
+        </foreach>
+        ON DUPLICATE KEY UPDATE CREATE_TIME = now()
+    </insert>
+</mapper>

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.game.gambler.plugin.mapper.ImportMapper">
+
+    <select id="getProducts" resultType="com.game.gambler.plugin.vo.ProductStockSumRes">
+        select gp.PACKAGE_CODE       as packageCode,
+               PACKAGE_NAME          as packageName,
+               PACKAGE_FEE           as packageFee,
+               IFNULL(inStockCnt, 0) as inStockCnt
+        from t_game_package gp
+                 left join (select count(*) as inStockCnt,
+                                   PACKAGE_CODE
+                            from t_game_license
+                            where GAME_CODE = #{GAME_CODE,jdbcType=VARCHAR}
+                              and DEL_FLAG = 0
+                            <if test="autoSubAccount == null"> and CREATE_SUBACOUNT = #{child_account,jdbcType=VARCHAR} and STATUS = '可使用' </if>
+                            <if test="autoSubAccount != null"> and OWNER = #{child_account,jdbcType=VARCHAR} and STATUS = '已分配'</if>
+                            group by PACKAGE_CODE) r on r.PACKAGE_CODE = gp.PACKAGE_CODE
+        where gp.GAME_CODE = #{GAME_CODE,jdbcType=VARCHAR}
+          and PACKAGE_STATUS = 0
+        <choose>
+            <when test='plugProductOrder != null and  plugProductOrder == "PACKAGE_FEE"'>
+                order by PACKAGE_FEE,PACKAGE_NAME
+            </when>
+            <otherwise>
+                order by PACKAGE_NAME, PACKAGE_FEE
+            </otherwise>
+        </choose>
+    </select>
+
+    <insert id="insert">
+        insert into t_game_license (GAME_CODE, PACKAGE_CODE, STATUS,
+                                    ORDER_NO, RECEIPT_TIME_CHAR, CURRENCY_CODE,
+                                    CREATE_SUBACOUNT, OWNER, SOUR,
+                                    INVALID_REASON, RECEIPT,
+                                    RECEIPT_TEMPORARY,DISCOUNT)
+        values (#{imReq.gameCode,jdbcType=VARCHAR},
+                #{imReq.packageCode,jdbcType=VARCHAR},
+                #{imReq.STATUS,jdbcType=VARCHAR},
+                #{imReq.orderNo,jdbcType=VARCHAR},
+                #{imReq.receiptTimeChar,jdbcType=VARCHAR},
+                #{imReq.currencyCode,jdbcType=VARCHAR},
+                #{import_acc,jdbcType=VARCHAR},
+                #{export_acc,jdbcType=VARCHAR},
+                #{imReq.SOUR,jdbcType=VARCHAR},
+                #{imReq.INVALID_REASON,jdbcType=VARCHAR},
+                #{imReq.receipt,jdbcType=LONGVARCHAR},
+                #{imReq.receiptTemporary,jdbcType=LONGVARCHAR},2)
+    </insert>
+
+
+    <select id="selectCountByOrderID" resultType="_int">
+        select count(*) from t_game_license where  ORDER_NO = #{orderNo,jdbcType=VARCHAR}
+    </select>
+
+
+</mapper>

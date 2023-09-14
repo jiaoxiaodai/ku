@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.game.gambler.personal.mapper.UserMainMapper">
+
+    <resultMap id="userMain" type="com.game.gambler.personal.entity.UserMain">
+        <id column="UN_ID" jdbcType="BIGINT" property="id"/>
+        <result column="ACCOUNT" jdbcType="VARCHAR" property="account"/>
+        <result column="PASSWORD" jdbcType="VARCHAR" property="password"/>
+        <result column="NAME" jdbcType="VARCHAR" property="name"/>
+        <result column="ENABLED" jdbcType="INTEGER" property="enable"/>
+        <result column="GOOGLE" jdbcType="VARCHAR" property="googleTOTP"/>
+        <result column="VERSION" jdbcType="INTEGER" property="versions"/>
+    </resultMap>
+
+    <select id="selectByAccount" resultMap="userMain">
+        select * from t_user
+        <where>
+            account = #{accout,jdbcType=VARCHAR}
+            <if test="pwd!=null">and password = #{pwd,jdbcType=VARCHAR}</if>
+        </where>
+    </select>
+
+    <update id="upDataVersion">
+        update t_user
+        set GOOGLE   = #{googleTOTP,jdbcType=VARCHAR},
+            PASSWORD = #{password,jdbcType=VARCHAR},
+            account  = #{account,jdbcType=VARCHAR},
+            VERSION  = VERSION + 1
+        where UN_ID = #{id,jdbcType=BIGINT}
+    </update>
+
+    <insert id="insertLoginLog">
+        insert into t_admin_log(ACCOUNT, LOG_IP)
+        values (#{account,jdbcType=VARCHAR}, #{ip,jdbcType=VARCHAR})
+    </insert>
+
+    <select id="selectLoginLog" resultType="com.game.gambler.personal.vo.LoginLogRes">
+        select * from t_admin_log order by UN_ID desc limit 6
+    </select>
+
+    <select id="selectById" resultMap="userMain">
+        select * from t_user
+    </select>
+</mapper>

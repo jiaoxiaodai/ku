@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.game.gambler.manager.mapper.HookMapper">
+
+    <select id="selectTotalPrice" resultType="com.game.gambler.manager.vo.GamePriceRes">
+        select p.game_code,game_name,p.package_code,package_name,
+        sum(package_fee) as price,
+        count(*) as count
+        from t_game_license p
+        left join t_game_package tgp on p.game_code = tgp.game_code and p.package_code = tgp.package_code
+        left join t_game tg on tg.game_code = p.game_code
+        where
+        del_flag = 0 and status in ('已分配','可使用')
+        <if test="game_code != null">and p.game_code = #{game_code,jdbcType=VARCHAR}</if>
+        <if test="package_code != null">and p.package_code = #{package_code,jdbcType=VARCHAR}</if>
+        group by p.game_code, p.package_code
+    </select>
+
+    <select id="queryHookData" resultType="com.game.gambler.manager.vo.ReceiptHookRes">
+        select game_code,package_code,
+        order_no,
+        receipt_temporary,
+        receipt,
+        receipt_time_char
+        from t_game_license
+        where del_flag = 0 and status in ('已分配','可使用')
+        <if test="game_code != null">and game_code = #{game_code,jdbcType=VARCHAR}</if>
+        <if test="package_code != null">and package_code = #{package_code,jdbcType=VARCHAR}</if>
+        order by un_id desc
+    </select>
+
+    <update id="upDataReceipt" parameterType="com.game.gambler.manager.vo.HookReq">
+        update t_game_license
+        set RECEIPT_TEMPORARY = null,RECEIPT = null
+        <where>
+            <if test="game_code != null">and game_code = #{game_code,jdbcType=VARCHAR}</if>
+            <if test="package_code != null">and package_code = #{package_code,jdbcType=VARCHAR}</if>
+        </where>
+    </update>
+
+</mapper>

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.game.gambler.plugin.mapper.ExportMapper">
+
+    <select id="getProducts" resultType="com.game.gambler.plugin.vo.ProductStockSumRes">
+        select PACKAGE_NAME        as packageName,
+               PACKAGE_FEE         as packageFee,
+               IFNULL(stockCnt, 0) as stockCnt
+        from t_game_package gp
+                 left join (select count(*) as stockCnt, PACKAGE_CODE
+                            from t_game_license
+                            where OWNER = #{child_account,jdbcType=VARCHAR}
+                              and GAME_CODE = #{GAME_CODE,jdbcType=VARCHAR}
+                              and PACKAGE_CODE = #{PACKAGE_CODE,jdbcType=VARCHAR}
+                              and STATUS in ('使用中', '已分配')
+                              and DEL_FLAG = 0
+                            group by PACKAGE_CODE) r on r.PACKAGE_CODE = gp.PACKAGE_CODE
+        where gp.GAME_CODE = #{GAME_CODE,jdbcType=VARCHAR}
+          and gp.PACKAGE_CODE = #{PACKAGE_CODE,jdbcType=VARCHAR}
+        order by gp.UN_ID
+    </select>
+
+    <select id="selectOutOneReceipt" resultType="com.game.gambler.plugin.vo.ExportReceiptRes">
+        select ORDER_NO,
+               RECEIPT_TIME_CHAR,
+               RECEIPT,
+               RECEIPT_TEMPORARY,
+               discount
+        from t_game_license
+        where OWNER = #{export_acc,jdbcType=VARCHAR}
+          and GAME_CODE = #{GAME_CODE,jdbcType=VARCHAR}
+          and PACKAGE_CODE = #{PACKAGE_CODE,jdbcType=VARCHAR}
+          and STATUS in ('使用中', '已分配')
+          and DEL_FLAG = 0
+        order by CREATE_TIME, field(STATUS, '使用中', '已分配')
+        limit 1
+    </select>
+
+    <update id="upDataReceiptStatus">
+        update t_game_license set STATUS = #{status,jdbcType=VARCHAR},USE_TIME = now()
+        where ORDER_NO = #{ORDER_NO,jdbcType=VARCHAR}
+    </update>
+</mapper>
